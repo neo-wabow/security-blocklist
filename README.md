@@ -72,8 +72,12 @@ Include 只能讀本機設定路徑，不能直接抓 GitHub HTTPS URL。私有 
 
 變更流程：下載至暫存、檢查 HTTP 成功與預期檔案格式、確認內容是否有變；有變時鎖定更新、備份目前檔案、原子替換正式檔，執行整份 Apache `configtest`。通過才 graceful reload，失敗則原子還原。若 reload 失敗也要保留錯誤與還原紀錄；只刪下載暫存，不刪正式 Include 檔。套用需核對實際 Apache 版本、mod_rewrite 是否可用及 REMOTE_ADDR 的可信代理配置。
 
-此 repo 目前沒有主機部署或自動更新程式，後續有效規則仍需授權。Apache 不會因 repo 提交而自行更新，也不會僅讀取期限註解就自動解封；加入有期限的有效規則前，必須實作請求時到期判斷或主機本地到期處理，不能僅依賴網路正常與人工移除。README 所述到期要求目前是待實作規格。
+此 repo 目前沒有主機部署；使用者已授權既有 wazuh 半小時 heartbeat 到期移除，後續新增有效規則仍需授權。Apache 不會因 repo 提交而自行更新，也不會僅讀取期限註解就自動解封。現在選用「到期後下一輪從 repo 移除，主機同步新 conf 並 reload」流程；尚不保證斷網或排程失敗時仍準時解除。若需要精準時間或離線到期保障，需另加本地到期處理。
 
 參考：
 - https://httpd.apache.org/docs/2.4/mod/core.html#include
 - https://httpd.apache.org/docs/2.4/programs/apachectl.html
+
+## 到期維護
+
+使用者已授權到期直接移除，由既有半小時巡檢附帶執行；三份名單／設定同一提交更新，只刪到期條目，不自動新增或續期。詳見 [expiry-policy.md](expiry-policy.md)。主機同步與 reload 尚未部署，repo 移除不代表主機已解封。
