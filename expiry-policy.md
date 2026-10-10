@@ -9,3 +9,5 @@
 每次寫入以最新main為基礎、提交前重核分支、force=false，並行變更重讀；成功核對TXT及commitSHA並保存本機證據。無變化保持安靜；維護失敗需要注意時回報。repo是public，主機原始TXT免key下載；寫入仍需既有gh憑證且不輸出token。不得把token、Cookie、會員個資或原始日誌提交publicrepo。
 
 主機同步尚未部署。repo寫入不等於已阻擋、解封或reload；Wazuh/SSH/Apache/Cloudflare/WAF仍唯讀。沿用同一wazuh heartbeat，不增排程；每日接班保留此最新TXT-only模式。
+
+2026-10-10後續追加授權：使用者明確要求先前列出的8個訂單API來源也加入當日封鎖TXT，本次新增8個、合計30個IP。仍為一次指定批次授權，不授權巡檢以後自動新增；JSON/conf不改、期限由維運處理。
