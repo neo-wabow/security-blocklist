@@ -22,3 +22,6 @@ JSON、blocklist.txt、當日 `ao_blacklist/YYYY/YYYY-MM-DD.txt` 與 `security-b
 換日第一個成功巡檢輪次可提交新日期檔；同日不變不提交。新日期派生檔本身未改名單決策，不增加JSON revision。若同轮移除到期項目，JSON、相容TXT、conf、當日TXT同一commit處理。保留舊日期檔作歷史快照，不能合併為目前有效名單。`blocklist.txt`維持當日名單相容副本；任何不一致需核對最新main與正式JSON，不盲目覆蓋人工改動。
 
 TXT不含host/method/path，主機不得因此擴大封鎖範圍。此派生檔維護仍不授權主機寫檔、reload、WAF/IP封鎖或新增有效条目；沿用同一wazuh heartbeat。
+
+
+2026-10-10 使用者授權將repo改為public，主機可免key讀取當日TXT；維護寫入仍需既有gh憑證。此可見性變更不授權新增IP、擴大規則或改動遠端主機。公開檔案／歷史不可包含憑證、Cookie、會員個資或原始巡檢日誌。

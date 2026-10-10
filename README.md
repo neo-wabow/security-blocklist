@@ -1,6 +1,6 @@
 # 安全黑名單記錄
 
-用於記錄經確認的封鎖決策，供未來主機同步使用。此為私有 repository。
+用於記錄經確認的封鎖決策，供未來主機同步使用。此為 public repository，主機讀取不需要GitHub token；寫入仍須已授權憑證。
 
 ## 目前狀態
 
@@ -96,7 +96,7 @@ Include 只能讀本機設定路徑，不能直接抓 GitHub HTTPS URL。私有 
 - 到期變動時，JSON（revision/updated_at）、blocklist.txt、security-blocklist.conf與當日TXT必須同一提交更新。只有建立新日期派生檔且名單決策未變時，不需要為此改JSON revision。
 - 下載必須確認HTTP成功與合法IP內容。404、403、網路失敗等不是空名單；不可因此清除現有設定。主機同步與本地到期處理目前尚未部署。
 
-### Apache 主機讀取權限
+### Apache 主機讀取權限（先前私有模式）
 
 使用獨立的GitHub fine-grained personal access token：Resource owner為`neo-wabow`，Repository access選Only select repositories，只選`security-blocklist`；Repository permissions只需Contents: Read-only（Metadata唯讀依GitHub自動包含）。不使用維護端目前的廣權限gh憑證，也不把token寫入repo、URL或Apache Include檔。
 
@@ -109,3 +109,16 @@ Headers：`Authorization: Bearer <主機專用唯讀TOKEN>`、`Accept: applicati
 官方參考：
 - https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
 - https://docs.github.com/en/rest/repos/contents#get-repository-content
+
+
+## Public 免 key 讀取（2026-10-10 使用者授權）
+
+本repo改為public。主機讀每日TXT不需要API key；維護端寫入仍使用既有GitHub憑證。前述私有模式的token步驟僅供未來改回private時參考，現在不需要建立主機讀取PAT。
+
+今天的原始文字下載網址：
+
+https://raw.githubusercontent.com/neo-wabow/security-blocklist/main/ao_blacklist/2026/2026-10-10.txt
+
+主機以Asia/Taipei日期替換年份與日期；只下載當日檔，不合併歷史快照。成功的空檔為0 bytes；HTTP錯誤或連線失敗不能當成空名單。下載驗證及Apache本地套用尚未部署。
+
+公開範圍包含repo檔案與Git提交歷史。只保存經核准的IP名單、格式與去敏決策，不提交token、Cookie、會員個資或原始應用日誌；完整巡檢證據留在本機工作區。
