@@ -5,6 +5,7 @@
 ## 目前狀態
 
 - `blocklist.json`：正式名單，初始為空。
+- `blocklist.txt`：簡易 IP 名單，一行一個 IP，初始為空；尚未設定同步或套用。
 - 尚未接入 Apache、Cloudflare/WAF 或其他主機；提交檔案本身不會執行封鎖。
 - IP 的惡意判定、實際封鎖及黑名單更新是不同動作。巡檢發現不自動成為封鎖項目。
 
@@ -45,3 +46,13 @@ Git 提交歷史可被改寫；目前尚未設定分支保護，不能當作不�
 
 尚未實作同步程式。預定以 GitHub Contents API 讀取 `main` 分支的 `blocklist.json`：寫入端使用只限本 repo 的 Contents read/write token；主機使用另一組 Contents read-only token。
 主機先驗證格式、IP、範圍及期限，再原子套用；失敗保留最近有效版本，不能任意擴大封鎖。同步程式需另經授權部署，並核對可信代理與真實來源 IP。
+
+## 一行一個 IP 的文字檔
+
+`blocklist.txt` 每行僅填完整 IPv4 或 IPv6；不放註解、CIDR、網址、理由或範例 IP，重複 IP 應去重。合法空名單是 0 bytes；下載程式需核對 HTTP 成功狀態及內容格式，不能把下載失敗當空名單。
+
+文字檔不包含 host、HTTP method、path 或 expires_at，不能完整表達 JSON 的限定規則。僅在明確核准的套用範圍內使用；不可直接把限定網址的 JSON 條目轉成整站封鎖。到期資訊仍需由 JSON 或主機持久紀錄保存，不能從純 IP 檔推算期限。
+
+主機處理方式尚未部署：下載暫存文字檔，驗證，轉成 Apache 設定，configtest 通過且內容有變才 graceful reload。暫存下載檔成功轉換後可刪除，GitHub 名單及主機正式設定須保留。Apache 不會直接把純 IP 行當成設定指令。
+
+若正式檔被 Apache Include 或 RewriteMap 引用，不能讀完就刪除；下次載入或請求可能需要再次讀檔。Include 檔缺失會使設定載入失敗；IncludeOptional 在支援的版本／匹配方式下忽略缺檔則可能漏套封鎖。不能把「刪除名單」當作已處理的 ACK，也不能讓第一台主機抓完就刪掉 GitHub 檔，否則其他節點拿不到相同版本。
