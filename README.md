@@ -5,6 +5,7 @@
 ## 目前狀態
 
 - `blocklist.json`：正式名單，初始為空。
+- `security-blocklist.conf`：供 Apache 直接 Include 的設定檔；目前只有註解，無封鎖規則。
 - `blocklist.txt`：簡易 IP 名單，一行一個 IP，初始為空；尚未設定同步或套用。
 - 尚未接入 Apache、Cloudflare/WAF 或其他主機；提交檔案本身不會執行封鎖。
 - IP 的惡意判定、實際封鎖及黑名單更新是不同動作。巡檢發現不自動成為封鎖項目。
@@ -44,7 +45,7 @@ Git 提交歷史可被改寫；目前尚未設定分支保護，不能當作不�
 
 ## 後續主機同步與權限
 
-尚未實作同步程式。預定以 GitHub Contents API 讀取 `main` 分支的 `blocklist.json`：寫入端使用只限本 repo 的 Contents read/write token；主機使用另一組 Contents read-only token。
+尚未實作同步程式。主機可直接以 GitHub Contents API 讀取 `main` 分支的 `security-blocklist.conf`，省略主機端格式轉換：寫入端使用只限本 repo 的 Contents read/write token；主機使用另一組 Contents read-only token。
 主機先驗證格式、IP、範圍及期限，再原子套用；失敗保留最近有效版本，不能任意擴大封鎖。同步程式需另經授權部署，並核對可信代理與真實來源 IP。
 
 ## 一行一個 IP 的文字檔
@@ -53,6 +54,26 @@ Git 提交歷史可被改寫；目前尚未設定分支保護，不能當作不�
 
 文字檔不包含 host、HTTP method、path 或 expires_at，不能完整表達 JSON 的限定規則。僅在明確核准的套用範圍內使用；不可直接把限定網址的 JSON 條目轉成整站封鎖。到期資訊仍需由 JSON 或主機持久紀錄保存，不能從純 IP 檔推算期限。
 
-主機處理方式尚未部署：下載暫存文字檔，驗證，轉成 Apache 設定，configtest 通過且內容有變才 graceful reload。暫存下載檔成功轉換後可刪除，GitHub 名單及主機正式設定須保留。Apache 不會直接把純 IP 行當成設定指令。
+主機處理方式尚未部署。推薦直接下載 repo 已轉好的 `security-blocklist.conf`，核對成功下載後套用；若選用 TXT，則仍需先驗證並轉成 Apache 設定。configtest 通過且內容有變才 graceful reload。暫存下載檔成功轉換後可刪除，GitHub 名單及主機正式設定須保留。Apache 不會直接把純 IP 行當成設定指令。
 
 若正式檔被 Apache Include 或 RewriteMap 引用，不能讀完就刪除；下次載入或請求可能需要再次讀檔。Include 檔缺失會使設定載入失敗；IncludeOptional 在支援的版本／匹配方式下忽略缺檔則可能漏套封鎖。不能把「刪除名單」當作已處理的 ACK，也不能讓第一台主機抓完就刪掉 GitHub 檔，否則其他節點拿不到相同版本。
+
+## Apache 直接 Include
+
+`security-blocklist.conf` 是維護端事先產生的 Apache 設定；主機僅需下載、檢查與載入。名單增刪時，JSON 與 conf 必須在同一提交更新，保留核准的 host、method、path 範圍，不能僅依 TXT 猜測或擴大封鎖。現有 JSON 與 TXT 均為空，因此 conf 只有註解，不啟用 RewriteEngine，也不放示意 IP 的有效規則。
+
+先把檔案下載至主機持久路徑（以下為建議路徑，尚未安裝），在要套用的既有 `<VirtualHost>` 內、既有 RewriteRule 前加入：
+
+```apache
+Include /etc/apache2/security-blocklist.conf
+```
+
+Include 只能讀本機設定路徑，不能直接抓 GitHub HTTPS URL。私有 repo 由同步程式使用專用唯讀 token 下載原始檔；token 不放在 URL 或 repo。
+
+變更流程：下載至暫存、檢查 HTTP 成功與預期檔案格式、確認內容是否有變；有變時鎖定更新、備份目前檔案、原子替換正式檔，執行整份 Apache `configtest`。通過才 graceful reload，失敗則原子還原。若 reload 失敗也要保留錯誤與還原紀錄；只刪下載暫存，不刪正式 Include 檔。套用需核對實際 Apache 版本、mod_rewrite 是否可用及 REMOTE_ADDR 的可信代理配置。
+
+此 repo 目前沒有主機部署或自動更新程式，後續有效規則仍需授權。Apache 不會因 repo 提交而自行更新，也不會僅讀取期限註解就自動解封；加入有期限的有效規則前，必須實作請求時到期判斷或主機本地到期處理，不能僅依賴網路正常與人工移除。README 所述到期要求目前是待實作規格。
+
+參考：
+- https://httpd.apache.org/docs/2.4/mod/core.html#include
+- https://httpd.apache.org/docs/2.4/programs/apachectl.html
