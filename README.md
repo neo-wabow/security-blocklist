@@ -6,7 +6,8 @@
 
 - `blocklist.json`：正式名單，初始為空。
 - `security-blocklist.conf`：供 Apache 直接 Include 的設定檔；目前只有註解，無封鎖規則。
-- `blocklist.txt`：簡易 IP 名單，一行一個 IP，初始為空；尚未設定同步或套用。
+- `ao_blacklist/YYYY/YYYY-MM-DD.txt`：依 Asia/Taipei 日期維護的當下有效全部 IP，一行一個 IP；同日持續更新，當日名單目前為空。
+- `blocklist.txt`：相容既有讀取方式的名單，與當日檔同一提交同步；尚未設定主機套用。
 - 尚未接入 Apache、Cloudflare/WAF 或其他主機；提交檔案本身不會執行封鎖。
 - IP 的惡意判定、實際封鎖及黑名單更新是不同動作。巡檢發現不自動成為封鎖項目。
 
@@ -81,3 +82,30 @@ Include 只能讀本機設定路徑，不能直接抓 GitHub HTTPS URL。私有 
 ## 到期維護
 
 使用者已授權到期直接移除，由既有半小時巡檢附帶執行；三份名單／設定同一提交更新，只刪到期條目，不自動新增或續期。詳見 [expiry-policy.md](expiry-policy.md)。主機同步與 reload 尚未部署，repo 移除不代表主機已解封。
+
+## 每日 IP 檔案（2026-10-10 使用者確認）
+
+主機每日讀取路徑 `ao_blacklist/YYYY/YYYY-MM-DD.txt`，日期使用 Asia/Taipei。例如 `ao_blacklist/2026/2026-10-10.txt`。
+
+- 內容是當下仍有效的全部 IP，包含前幾天核准而尚未到期的條目，不只當天新增。
+- 同日檔案會隨已授權名單變動或到期移除更新；一行一個完整 IPv4/IPv6，去重並排序，無註解、CIDR、JSON、網址或示意 IP。空名單為0 bytes。
+- 正式決策與期限仍以 `blocklist.json` 為權威。TXT只列IP，不含host/method/path範圍；不得把限定範圍的条目直接轉成整站或所有主機封鎖。
+- 每輪既有半小時巡檢檢查當日檔案；換日第一個成功輪次建立新日期檔。不增加排程，也不承諾午夜即已產生。
+- 過去日期的檔案保留為最後一次寫入的歷史快照；它們不代表現在有效名單。主機應讀今天的檔，不能任意合併歷史檔或將過期快照當正式名單。
+- 建立或同步每日派生檔不是新增封鎖授權；巡檢發現IP不會自動加進JSON。只有來源資料與格式都核對成功才更新。
+- 到期變動時，JSON（revision/updated_at）、blocklist.txt、security-blocklist.conf與當日TXT必須同一提交更新。只有建立新日期派生檔且名單決策未變時，不需要為此改JSON revision。
+- 下載必須確認HTTP成功與合法IP內容。404、403、網路失敗等不是空名單；不可因此清除現有設定。主機同步與本地到期處理目前尚未部署。
+
+### Apache 主機讀取權限
+
+使用獨立的GitHub fine-grained personal access token：Resource owner為`neo-wabow`，Repository access選Only select repositories，只選`security-blocklist`；Repository permissions只需Contents: Read-only（Metadata唯讀依GitHub自動包含）。不使用維護端目前的廣權限gh憑證，也不把token寫入repo、URL或Apache Include檔。
+
+透過GitHub Contents API取得原始文字：
+
+`GET https://api.github.com/repos/neo-wabow/security-blocklist/contents/ao_blacklist/2026/2026-10-10.txt?ref=main`
+
+Headers：`Authorization: Bearer <主機專用唯讀TOKEN>`、`Accept: application/vnd.github.raw+json`。實際日期由主機以Asia/Taipei計算。這裡是格式範例，沒有存放真實token。
+
+官方參考：
+- https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
+- https://docs.github.com/en/rest/repos/contents#get-repository-content
