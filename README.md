@@ -4,9 +4,9 @@
 
 ## 目前狀態
 
-- `blocklist.json`：正式名單，初始為空。
+- `blocklist.json`：先前結構化格式，現在暫停同步，仍為空；目前請讀每日TXT。
 - `security-blocklist.conf`：供 Apache 直接 Include 的設定檔；目前只有註解，無封鎖規則。
-- `ao_blacklist/YYYY/YYYY-MM-DD.txt`：依 Asia/Taipei 日期維護的當下有效全部 IP，一行一個 IP；同日持續更新，當日名單目前為空。
+- `ao_blacklist/YYYY/YYYY-MM-DD.txt`：依 Asia/Taipei 日期維護的當下有效全部 IP，一行一個 IP；同日持續更新，當日TXT已填入經核對的防護來源；期限與主機套用由維運系統處理。
 - `blocklist.txt`：相容既有讀取方式的名單，與當日檔同一提交同步；尚未設定主機套用。
 - 尚未接入 Apache、Cloudflare/WAF 或其他主機；提交檔案本身不會執行封鎖。
 - IP 的惡意判定、實際封鎖及黑名單更新是不同動作。巡檢發現不自動成為封鎖項目。
@@ -122,3 +122,16 @@ https://raw.githubusercontent.com/neo-wabow/security-blocklist/main/ao_blacklist
 主機以Asia/Taipei日期替換年份與日期；只下載當日檔，不合併歷史快照。成功的空檔為0 bytes；HTTP錯誤或連線失敗不能當成空名單。下載驗證及Apache本地套用尚未部署。
 
 公開範圍包含repo檔案與Git提交歷史。只保存經核准的IP名單、格式與去敏決策，不提交token、Cookie、會員個資或原始應用日誌；完整巡檢證據留在本機工作區。
+
+
+## 目前採用TXT-only（2026-10-10 最新指示，優先於先前格式）
+
+使用者要求先整理今天截至查詢截止的IP進每日TXT，不在repo填到期時間，JSON與Apache conf暫不製作或更新；到期由系統維運處理。
+
+- 正式讀取檔為`ao_blacklist/YYYY/YYYY-MM-DD.txt`，`blocklist.txt`為相容TXT副本；一行一個IP、去重、數值排序。
+- `blocklist.json`與`security-blocklist.conf`暫留先前空狀態，不再用JSON entries推算或清空目前TXT，也不把TXT當作未授權獨立規則而刪除。先前JSON為權威、JSON/TXT/conf原子同步及repo到期刪除流程暫停；本段為最新流程。
+- TXT是供維運接收的來源名單；有效性、期限、實際套用範圍、解除及已處理狀態由維運系統控制。跨日再次列出同IP不代表新的封鎖或續期。
+- 本次加入依據為使用者已回報封鎖、明確入侵路徑探測（非403）或集中404；不因IP國家、ASN或HTTP200單独列入。未核對的會員訂單來源仍另行追蹤，不混入本次名單。
+- 本次加入授權只限此輪今日整理；之後巡檢仍不能自行新增IP、補期限、續期或直接改主機。半小時巡檢只核對既有TXT，已存在且無變動不提交。換日可將最近已授權TXT原樣帶到新日期檔，保留舊快照；它代表同一批維運待處理／維護的名單，不自行認定每個IP尚未到期。
+- 維運或使用者從TXT移除的IP需保留移除，不得依舊日快照重新補回。同期檔案如有人工變動，重讀main並核對，不覆蓋。
+- 當日TXT與相容TXT同一提交更新；JSON/conf暫不動。主機同步尚未部署，repo寫入不代表Apache已阻擋。

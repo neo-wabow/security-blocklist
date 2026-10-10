@@ -1,27 +1,11 @@
-# 到期移除規則
+# 黑名單維護規則（TXT-only，2026-10-10最新指示）
 
-使用者於 2026-10-10 授權：到期直接從 IP 名單移除。沿用既有 wazuh 半小時 heartbeat，每輪另外核對本私有 repo；不建立新的巡檢排程。
+使用者已授權本輪整理台北日期2026-10-10截至查詢截止的防護IP，寫入ao_blacklist/2026/2026-10-10.txt。一行一個完整IPv4/IPv6、去重排序、無註解、理由、CIDR或示意IP。blocklist.txt為相容副本，兩TXT同一提交。
 
-以 `blocklist.json` 的明確 `expires_at` 為權威。使用含時區的 ISO 8601 時間，轉為 UTC 比較；到期時間小於或等於當下才移除。缺少時間、時間格式錯誤、回報期限而無實際起點者，不猜測到期，保留並回報待處理。
+使用者最新指示：「先不要到期時間，JSON跟Apache conf可以先不做」「到期時間系統維運那邊會處理」。此指示優先於先前JSON權威及repo到期刪除流程。blocklist.json與security-blocklist.conf保持原狀，既有半小時巡檢不依JSON空名單清空TXT，不猜期限、不在repo自動到期刪除，不把目前TXT判成無JSON對應異常。實際期限、套用範圍、解除與狀態由維運系統管理，跨日出現同IP不代表新的封鎖或續期。
 
-只移除已到期条目，不新增封鎖、不延長期限、不擴大範圍。若同 IP 還有另一筆未到期條目，保留該筆有效規則；不能整個 IP 一起刪。
+本輪寫入是使用者明確授權的一次今日整理，並非巡檢可永久自動新增IP。之後每輪讀最新政策、當日與相容TXT，已存在且相同不提交；不自行加IP、回補舊IP、填期限、續期、改JSON/conf、改主機或WAF。換日第一個成功輪次可將最近已授權TXT原樣帶到新日期檔，保留舊歷史快照；它是同一批維運維護名單，不由repo判定各IP是否仍有效。若當日或相容檔已被人工修改／移除，保留最新變動；不一致重讀核對，不盲目覆蓋或合併舊快照。
 
-JSON、blocklist.txt、當日 `ao_blacklist/YYYY/YYYY-MM-DD.txt` 與 `security-blocklist.conf` 在同一提交更新，JSON 的 revision 加一並更新 updated_at。TXT 僅刪去不再有適用有效條目的 IP；conf 僅刪對應到期規則，保留其他規則與既有 host/method/path 範圍。未建立JSON對應的TXT或conf規則不可臆測期限或直接刪除；先回報不一致。沒有到期項目且當日派生檔已存在並一致時，不產生空提交。
+每次寫入以最新main為基礎、提交前重核分支、force=false，並行變更重讀；成功核對TXT及commitSHA並保存本機證據。無變化保持安靜；維護失敗需要注意時回報。repo是public，主機原始TXT免key下載；寫入仍需既有gh憑證且不輸出token。不得把token、Cookie、會員個資或原始日誌提交publicrepo。
 
-每次讀取 main 最新狀態，基於同一個 commit 判斷與準備檔案。提交前再確認分支未变，正常 fast-forward、force=false 更新；如有並行變更則重新讀取與核對，不覆蓋或 force push。成功後核對 main 及三個檔案，留存移除條目 ID、IP、到期時間與 commit SHA；記錄以 Git 歷史追溯。
-
-這是 GitHub repo 到期刪除的狹窄寫入授權。Wazuh/SSH 巡檢仍唯讀，不在主機直接改檔、封鎖、解封、reload 或修改 Cloudflare/WAF。主機需同步新的 conf 並成功 reload，實際封鎖才會解除；不能把 repo 提交當成已解除。半小時排程為下一輪處理，執行/連線失敗可能更晚，並非精準到秒。主機同步尚未部署。
-
-保持無變更時安靜；完成到期清除或維護失敗需要注意時才在巡檢對話通知，失敗不得宣稱完成。使用本機既有 gh 憑證，不輸出 token。每日巡檢接班需保留此維護授權及證據路徑。
-
-
-## 每日派生檔例外（2026-10-10 新增授權）
-
-使用者指定 `ao_blacklist/2026/2026-10-10.txt` 格式，並確認內容為當下仍有效的全部IP。以Asia/Taipei日期建立或同步當日TXT，一行一個IP，去重排序；由已核准且明確有效的JSON資料派生，包含前日核准未到期者。不可把監控發現自行新增成正式封鎖，也不可猜測缺失期限；異常或獨立未對應規則保留並報告。
-
-換日第一個成功巡檢輪次可提交新日期檔；同日不變不提交。新日期派生檔本身未改名單決策，不增加JSON revision。若同轮移除到期項目，JSON、相容TXT、conf、當日TXT同一commit處理。保留舊日期檔作歷史快照，不能合併為目前有效名單。`blocklist.txt`維持當日名單相容副本；任何不一致需核對最新main與正式JSON，不盲目覆蓋人工改動。
-
-TXT不含host/method/path，主機不得因此擴大封鎖範圍。此派生檔維護仍不授權主機寫檔、reload、WAF/IP封鎖或新增有效条目；沿用同一wazuh heartbeat。
-
-
-2026-10-10 使用者授權將repo改為public，主機可免key讀取當日TXT；維護寫入仍需既有gh憑證。此可見性變更不授權新增IP、擴大規則或改動遠端主機。公開檔案／歷史不可包含憑證、Cookie、會員個資或原始巡檢日誌。
+主機同步尚未部署。repo寫入不等於已阻擋、解封或reload；Wazuh/SSH/Apache/Cloudflare/WAF仍唯讀。沿用同一wazuh heartbeat，不增排程；每日接班保留此最新TXT-only模式。
